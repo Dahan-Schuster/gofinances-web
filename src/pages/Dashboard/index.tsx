@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { FiChevronDown, FiChevronUp, FiMinus } from 'react-icons/fi';
 
 import income from '../../assets/income.svg';
 import outcome from '../../assets/outcome.svg';
@@ -11,94 +12,162 @@ import Header from '../../components/Header';
 import formatValue from '../../utils/formatValue';
 
 import { Container, CardContainer, Card, TableContainer } from './styles';
+import formatDate from '../../utils/formatDate';
+import capitalize from '../../utils/capitalize';
 
 interface Transaction {
-  id: string;
-  title: string;
-  value: number;
-  formattedValue: string;
-  formattedDate: string;
-  type: 'income' | 'outcome';
-  category: { title: string };
-  created_at: Date;
+	id: string;
+	title: string;
+	value: number;
+	formattedValue: string;
+	formattedDate: string;
+	type: 'income' | 'outcome';
+	category: { title: string };
+	created_at: Date;
 }
 
 interface Balance {
-  income: string;
-  outcome: string;
-  total: string;
+	income: number;
+	outcome: number;
+	total: number;
+}
+
+interface Transactions {
+	transactions: Transaction[];
+	balance: Balance;
+}
+
+interface TableTitle {
+	title: string;
+	prop: keyof Transaction;
 }
 
 const Dashboard: React.FC = () => {
-  // const [transactions, setTransactions] = useState<Transaction[]>([]);
-  // const [balance, setBalance] = useState<Balance>({} as Balance);
+	const [transactions, setTransactions] = useState<Transaction[]>([]);
+	const [balance, setBalance] = useState<Balance>({} as Balance);
+	const [orderBy, setOrderBy] = useState<keyof Transaction | null>(null);
+	const [orderByAsc, setOrderByAsc] = useState(false);
 
-  useEffect(() => {
-    async function loadTransactions(): Promise<void> {
-      // TODO
-    }
+	function orderTable(prop: keyof Transaction): void {
+		setOrderBy(prop);
+		setOrderByAsc(!orderByAsc);
+		if (prop === 'value') {
+			transactions.sort((a, b) => {
+				const valueA = a.type === 'outcome' ? -a.value : a.value;
+				const valueB = b.type === 'outcome' ? -b.value : b.value;
+				return orderByAsc ? valueA - valueB : valueB - valueA;
+			});
+		} else if (prop === 'created_at') {
+			transactions.sort((a, b) => {
+				const dateA = new Date(a.created_at).getTime();
+				const dateB = new Date(b.created_at).getTime();
+				return orderByAsc ? dateA - dateB : dateB - dateA;
+			});
+		} else if (prop === 'title') {
+			transactions.sort((a, b) => {
+				const titleA = a.title.toUpperCase().charCodeAt(0);
+				const titleB = b.title.toUpperCase().charCodeAt(0);
+				return orderByAsc ? titleA - titleB : titleB - titleA;
+			});
+		} else if (prop === 'category') {
+			transactions.sort((a, b) => {
+				const titleA = a.category.title.toUpperCase().charCodeAt(0);
+				const titleB = b.category.title.toUpperCase().charCodeAt(0);
+				return orderByAsc ? titleA - titleB : titleB - titleA;
+			});
+		}
+	}
 
-    loadTransactions();
-  }, []);
+	useEffect(() => {
+		api.get<Transactions>('/transactions').then(response => {
+			setTransactions(response.data.transactions);
+			setBalance(response.data.balance);
+		});
+	}, []);
 
-  return (
-    <>
-      <Header />
-      <Container>
-        <CardContainer>
-          <Card>
-            <header>
-              <p>Entradas</p>
-              <img src={income} alt="Income" />
-            </header>
-            <h1 data-testid="balance-income">R$ 5.000,00</h1>
-          </Card>
-          <Card>
-            <header>
-              <p>Saídas</p>
-              <img src={outcome} alt="Outcome" />
-            </header>
-            <h1 data-testid="balance-outcome">R$ 1.000,00</h1>
-          </Card>
-          <Card total>
-            <header>
-              <p>Total</p>
-              <img src={total} alt="Total" />
-            </header>
-            <h1 data-testid="balance-total">R$ 4000,00</h1>
-          </Card>
-        </CardContainer>
+	const titles: TableTitle[] = [
+		{ title: 'Título', prop: 'title' },
+		{ title: 'Preço', prop: 'value' },
+		{ title: 'Categoria', prop: 'category' },
+		{ title: 'Data', prop: 'created_at' },
+	];
+	return (
+		<>
+			<Header />
+			<Container>
+				<CardContainer>
+					<Card>
+						<header>
+							<p>Entradas</p>
+							<img src={income} alt="Income" />
+						</header>
+						<h1 data-testid="balance-income">{formatValue(balance.income)}</h1>
+					</Card>
+					<Card>
+						<header>
+							<p>Saídas</p>
+							<img src={outcome} alt="Outcome" />
+						</header>
+						<h1 data-testid="balance-outcome">{formatValue(balance.outcome)}</h1>
+					</Card>
+					<Card total>
+						<header>
+							<p>Total</p>
+							<img src={total} alt="Total" />
+						</header>
+						<h1 data-testid="balance-total">{formatValue(balance.total)}</h1>
+					</Card>
+				</CardContainer>
 
-        <TableContainer>
-          <table>
-            <thead>
-              <tr>
-                <th>Título</th>
-                <th>Preço</th>
-                <th>Categoria</th>
-                <th>Data</th>
-              </tr>
-            </thead>
+				<TableContainer>
+					<table>
+						<thead>
+							<tr>
+								{titles.map(title => {
+									let Icon = <FiMinus />;
 
-            <tbody>
-              <tr>
-                <td className="title">Computer</td>
-                <td className="income">R$ 5.000,00</td>
-                <td>Sell</td>
-                <td>20/04/2020</td>
-              </tr>
-              <tr>
-                <td className="title">Website Hosting</td>
-                <td className="outcome">- R$ 1.000,00</td>
-                <td>Hosting</td>
-                <td>19/04/2020</td>
-              </tr>
-            </tbody>
-          </table>
-        </TableContainer>
-      </Container>
-    </>
-  );
+									if (title.prop === orderBy) {
+										if (!orderByAsc) {
+											Icon = <FiChevronUp style={{ color: '#FF872C' }} />;
+										} else {
+											Icon = <FiChevronDown style={{ color: '#FF872C' }} />;
+										}
+									}
+
+									return (
+										<th
+											onClick={() => {
+												orderTable(title.prop);
+											}}
+										>
+											{title.title}
+											{Icon}
+										</th>
+									);
+								})}
+							</tr>
+						</thead>
+
+						<tbody>
+							{transactions.map((transaction: Transaction) => {
+								return (
+									<tr key={transaction.id}>
+										<td className="title">{transaction.title}</td>
+										<td className={transaction.type}>
+											{transaction.type === 'outcome' && '- '}
+											{formatValue(transaction.value)}
+										</td>
+										<td>{capitalize(transaction.category.title)}</td>
+										<td>{formatDate(new Date(transaction.created_at))}</td>
+									</tr>
+								);
+							})}
+						</tbody>
+					</table>
+				</TableContainer>
+			</Container>
+		</>
+	);
 };
 
 export default Dashboard;
