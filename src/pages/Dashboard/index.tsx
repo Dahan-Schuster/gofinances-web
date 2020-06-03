@@ -45,6 +45,7 @@ interface TableTitle {
 const Dashboard: React.FC = () => {
 	const [transactions, setTransactions] = useState<Transaction[]>([]);
 	const [balance, setBalance] = useState<Balance>({} as Balance);
+	const [loadedValues, setLoadedValues] = useState(false);
 	const [orderBy, setOrderBy] = useState<keyof Transaction | null>(null);
 	const [orderByAsc, setOrderByAsc] = useState(false);
 
@@ -82,6 +83,7 @@ const Dashboard: React.FC = () => {
 		api.get<Transactions>('/transactions').then(response => {
 			setTransactions(response.data.transactions);
 			setBalance(response.data.balance);
+			setLoadedValues(true);
 		});
 	}, []);
 
@@ -101,21 +103,27 @@ const Dashboard: React.FC = () => {
 							<p>Entradas</p>
 							<img src={income} alt="Income" />
 						</header>
-						<h1 data-testid="balance-income">{formatValue(balance.income)}</h1>
+						{loadedValues && (
+							<h1 data-testid="balance-income">{formatValue(balance.income)}</h1>
+						)}
 					</Card>
 					<Card>
 						<header>
 							<p>Saídas</p>
 							<img src={outcome} alt="Outcome" />
 						</header>
-						<h1 data-testid="balance-outcome">{formatValue(balance.outcome)}</h1>
+						{loadedValues && (
+							<h1 data-testid="balance-outcome">{formatValue(balance.outcome)}</h1>
+						)}
 					</Card>
 					<Card total>
 						<header>
 							<p>Total</p>
 							<img src={total} alt="Total" />
 						</header>
-						<h1 data-testid="balance-total">{formatValue(balance.total)}</h1>
+						{loadedValues && (
+							<h1 data-testid="balance-total">{formatValue(balance.total)}</h1>
+						)}
 					</Card>
 				</CardContainer>
 
@@ -123,7 +131,7 @@ const Dashboard: React.FC = () => {
 					<table>
 						<thead>
 							<tr>
-								{titles.map(title => {
+								{titles.map((title, index) => {
 									let Icon = <FiMinus />;
 
 									if (title.prop === orderBy) {
@@ -136,6 +144,7 @@ const Dashboard: React.FC = () => {
 
 									return (
 										<th
+											key={String(index)}
 											onClick={() => {
 												orderTable(title.prop);
 											}}
@@ -149,19 +158,17 @@ const Dashboard: React.FC = () => {
 						</thead>
 
 						<tbody>
-							{transactions.map((transaction: Transaction) => {
-								return (
-									<tr key={transaction.id}>
-										<td className="title">{transaction.title}</td>
-										<td className={transaction.type}>
-											{transaction.type === 'outcome' && '- '}
-											{formatValue(transaction.value)}
-										</td>
-										<td>{capitalize(transaction.category.title)}</td>
-										<td>{formatDate(new Date(transaction.created_at))}</td>
-									</tr>
-								);
-							})}
+							{transactions.map((transaction: Transaction) => (
+								<tr key={transaction.id}>
+									<td className="title">{transaction.title}</td>
+									<td className={transaction.type}>
+										{transaction.type === 'outcome' && '- '}
+										{formatValue(transaction.value)}
+									</td>
+									<td>{capitalize(transaction.category.title)}</td>
+									<td>{formatDate(new Date(transaction.created_at))}</td>
+								</tr>
+							))}
 						</tbody>
 					</table>
 				</TableContainer>
